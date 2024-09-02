@@ -2,10 +2,12 @@ import jsonlines
 import json
 import os
 import logging
+import re
 
 from tqdm import tqdm
 from utils.config import Config
 from modules.Sql_Task import Sql_Task
+from modules.Text_Task import DocumentSearch
 from modules.Generator import Generator
 from modules.Intent_Recognition import Intent_Recognition
 
@@ -45,6 +47,10 @@ def run_eval(checkpoint_file=Config.res_json_path):
     ir = Intent_Recognition()  # 加载意图识别模型
     sql_task = Sql_Task()  # 加载SQL任务执行器
     generator = Generator()  # 加载结果生成器
+    ds = DocumentSearch(
+        stopword_path=Config.stop_word_path,
+        md_path=Config.pdf_to_md_path
+    )
     sql_error = 0  # 初始化SQL错误计数器
 
     for i, question in enumerate(question_generator):
@@ -53,31 +59,47 @@ def run_eval(checkpoint_file=Config.res_json_path):
             continue
         
         logging.info(f"Processing question {i}: {question}")
-        
-        query_result = None  # 初始化查询结果变量
-        q_exps = query_result_exps = final_response_exps = None  # 初始化解释变量
+
+        classfly = ir.run(question)
+        logging.info(classfly)
 
         # 处理每个问题
-        if "数据查询" in ir.run(question):
+        prompt = None
+        if "数据查询" in classfly and "文本理解" not in classfly:
             logging.info("Detected intent: 数据查询")
             try:
                 # 尝试执行SQL任务
-                q_exps, query_result, query_result_exps, final_response_exps = sql_task.run(question)
+                prompt = sql_task.run(question)
                 logging.info(f"SQL Task executed successfully for question {i}")
+                logging.info(f"prompt {prompt}")
+            
             except Exception as e:
                 # 捕获异常并增加SQL错误计数
                 sql_error += 1
                 query_result = f"SQL 查询失败: {e}"
                 logging.error(f"SQL Task failed for question {i}: {e}")
                 continue
+        elif "文本理解" in classfly and "数据查询" not in classfly:
+            logging.info("Detected intent: 文本理解")
+            # 提取公司名称
+            company_name = re.search(r'公司名称：\s*[“"\'\(《【{]*([^”"\'\)》】}]+)[”"\'\)》】}]*', classfly).group(1)
+
+            # 提取关键词
+            keyword = re.search(r'关键词：\s*[“"\'\(《【{]*([^”"\'\)》】}]+)[”"\'\)》】}]*', classfly).group(1)
+
+            logging.info("公司名称:"+company_name)
+            logging.info("关键词:"+keyword)
+            
+            if company_name is not None and keyword is not None:
+                prompt = ds.run(question, company_name, keyword)
+
+            logging.info(f"prompt {prompt}")
+        
         else:
-            logging.info("Detected intent: 文本分析")
-            # 处理非SQL任务的逻辑（此处为占位符）
-            query_result = "文本分析结果"  # 你可以在此处替换为实际的文本分析结果
-            continue
+            return
 
         # 生成最终的回答
-        answer = generator.run(question, query_result, q_exps, query_result_exps, final_response_exps)
+        answer = generator.run(prompt)
         logging.info(f"Generated answer for question {i}: {answer}")
 
         # 创建结果字典

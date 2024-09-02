@@ -53,7 +53,9 @@ class Sql_Task:
                 logging.info(f"尝试 {attempt + 1}: 执行SQL查询: {sql_query}")
                 query_result = self.db.select(sql_query)
                 logging.info(f"SQL查询成功: {sql_query}")
-                return q_exps, query_result, query_result_exps, final_response_exps
+
+                # 返回提示词
+                return Prompt.create_final_icl_prompt(new_question, query_result, zip(q_exps, query_result_exps, final_response_exps))
 
             except Exception as e:
                 # 记录错误信息
@@ -81,25 +83,25 @@ class Sql_Task:
         return AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
 
     # 加载RAG数据库
-    def init_rag(self, path_csv=Config.sql_answer_template_path):
-        if os.path.exists(Config.sql_answer_emb_path):
+    def init_rag(self, path_csv=Config.sql_template_csv_path):
+        if os.path.exists(Config.sql_icl_cache_path):
             # 加载持久化数据
-            frequency_matrix, token_to_index, questions, sqls, query_results, final_respons = self.load_persisted_data(Config.sql_answer_emb_path)
+            frequency_matrix, token_to_index, questions, sqls, query_results, final_respons = self.load_persisted_data(Config.sql_icl_cache_path)
         else:
             # 加载样本库
             questions, sqls, query_results, final_respons = self.load_csv(path_csv)
             
             # 对样本库中的问题进行tokenizer编码并统计词频
-            token_counts = self.tokenize_and_count(questions, self.tokenizer)
+            token_counts = self.tokenize_and_count(questions)
             frequency_matrix, token_to_index = self.create_token_frequency_matrix(token_counts)
             
             # 保存持久化数据
-            self.save_persisted_data(Config.sql_answer_emb_path, frequency_matrix, token_to_index, questions, sqls, query_results, final_respons)
+            self.save_persisted_data(frequency_matrix, token_to_index, questions, sqls, query_results, final_respons)
 
         return frequency_matrix, token_to_index, questions, sqls, query_results, final_respons
     
     # 读取CSV文件
-    def load_csv(file_path):
+    def load_csv(self, file_path):
         df = pd.read_csv(file_path, encoding='utf-8')
         questions = df['问题'].tolist()
         sqls = df['SQL'].tolist()
@@ -110,11 +112,11 @@ class Sql_Task:
 
     # 持久化sql icl模板
     def save_persisted_data(self, frequency_matrix, token_to_index, questions, sqls, query_results, final_respons):
-        with open(Config.sql_answer_emb_path, 'wb') as file:
+        with open(Config.sql_icl_cache_path, 'wb') as file:
             pickle.dump((frequency_matrix, token_to_index, questions, sqls, query_results, final_respons), file)
 
     # 加载持久化sql icl模板
-    def load_persisted_data(self, file_path=Config.sql_answer_emb_path):
+    def load_persisted_data(self, file_path=Config.sql_icl_cache_path):
         with open(file_path, 'rb') as file:
             frequency_matrix, token_to_index, questions, sqls, query_results, final_respons = pickle.load(file)
         return frequency_matrix, token_to_index, questions, sqls, query_results, final_respons

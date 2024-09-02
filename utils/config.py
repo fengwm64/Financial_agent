@@ -1,7 +1,7 @@
 import os
 
 # 定义工作目录
-WORK_DIR = '/home/fwm/projects/financial_agent/数据处理/SQL/'
+WORK_DIR = '/home/fwm/projects/llm_agent/'
 
 # 获取当前文件的上级目录路径
 def get_base_file_path():
@@ -25,13 +25,15 @@ class Config:
     db_sqlite_url = os.path.join(base_path, "data/db/博金杯比赛数据.db").replace("\\", "/")
     
     # SQL 答案模板的 CSV 文件路径
-    sql_answer_template_path = os.path.join(base_path, 'data/ICL_SQL.csv')
+    sql_template_csv_path = os.path.join(base_path, 'data/ICL_SQL.csv')
 
     # SQL 答案模板嵌入持久化文件路径
-    sql_answer_emb_path = os.path.join(base_path, 'cache/ICL_SQL_Data.pkl')
+    sql_icl_cache_path = os.path.join(base_path, 'cache/ICL_SQL_Data.pkl')
 
     # md文档划分缓存路径
-    doc_cache_path = os.path.join(base_path, 'cache/')
+    documents_cache_path = os.path.join(base_path, 'cache/docs_cache.pkl')
+    bm25_cache_path = os.path.join(base_path, 'cache/bm25.pkl')
+    tokenized_docs_cache_path = os.path.join(base_path, 'cache/tokenized_docs.pkl')
 
     # API 密钥，用于访问模型或服务（此处为占位符）
     zhipu_api_key = "b2ccc57634d43e3b01b255d5d9b3840d.KNUQg8zN98Id9OwU"
