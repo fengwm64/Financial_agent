@@ -69,7 +69,7 @@ def run_eval(checkpoint_file=Config.res_json_path):
             logging.info("Detected intent: 数据查询")
             try:
                 # 尝试执行SQL任务
-                prompt = sql_task.run(question)
+                prompt, _ = sql_task.run(question)
                 logging.info(f"SQL Task executed successfully for question {i}")
                 logging.info(f"prompt {prompt}")
             
@@ -91,7 +91,7 @@ def run_eval(checkpoint_file=Config.res_json_path):
             logging.info("关键词:"+keyword)
             
             if company_name is not None and keyword is not None:
-                prompt = ds.run(question, company_name, keyword)
+                prompt, _ = ds.run(question, company_name, keyword)
 
             logging.info(f"prompt {prompt}")
         

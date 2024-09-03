@@ -32,13 +32,12 @@ class DocumentSearch:
             
             # 拼接提示词
             final_prompt = Prompt.create_final_text_prompt(question, contents)
-            logging.info(f"生成的最终提示词:\n{final_prompt}\n")
         else:
             # 抛出异常
             raise ValueError(f"在文件 {most_common_file} 中未找到关键词 '{keyword}'。")
         
         # 返回prompt
-        return final_prompt
+        return final_prompt, most_common_file
     
     # 加载停用词
     def load_stopwords(self, file_path):

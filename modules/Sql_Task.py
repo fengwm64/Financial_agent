@@ -55,16 +55,16 @@ class Sql_Task:
                 logging.info(f"SQL查询成功: {sql_query}")
 
                 # 返回提示词
-                return Prompt.create_final_icl_prompt(new_question, query_result, zip(q_exps, query_result_exps, final_response_exps))
+                return Prompt.create_final_icl_prompt(new_question, query_result, zip(q_exps, query_result_exps, final_response_exps)), sql_query
 
             except Exception as e:
                 # 记录错误信息
-                error_message = f"SQL执行错误: {str(e)}"
+                error_message = f"{str(e)}"
                 logging.error(f"尝试 {attempt + 1} 失败: {error_message}")
 
                 # 生成反思提示并让大模型进行反思
-                prompt_head = f"你是一个SQLite数据库专家。请逐步思考并根据下面错误信息改正SQLite语句。"
-                prompt = f"{prompt_head}\n{sql_query}\n根据下面错误信息改正:{error_message}\n"
+                prompt_head = f"你是一个SQLite数据库专家。\n可供使用的表和字段信息：\n字段：基金代码, 基金全称, 基金简称, 管理人, 托管人, 基金类型, 成立日期, 到期日期, 管理费率, 托管费率, 持仓日期, 股票代码, 股票名称, 数量, 市值, 市值占基金资产净值比, 第N大重仓股, 所在证券市场, 所属国家(地区), 报告类型, 债券类型, 债券名称, 持债数量, 持债市值, 持债市值占基金资产净值比, 对应股票代码, 交易日期, 单位净值, 复权单位净值, 累计单位净值, 资产净值, 昨收盘(元), 今开盘(元), 最高价(元), 最低价(元), 收盘价(元), 成交量(股), 成交金额(元), 行业划分标准, 一级行业名称, 二级行业名称, 公告日期, 截止日期, 报告期期初基金总份额, 报告期基金总申购份额, 报告期基金总赎回份额, 报告期期末基金总份额, 定期报告所属年度, 机构投资者持有的基金份额, 机构投资者持有的基金份额占总份额比例, 个人投资者持有的基金份额, 个人投资者持有的基金份额占总份额比例\n表名：基金基本信息、基金股票持仓明细、基金债券持仓明细、基金可转债持仓明细、基金日行情表、A股票日行情表、港股票日行情表、A股公司行业划分表、基金规模变动表、基金份额持有人结构\n\n请逐步思考并根据下面错误信息改正SQLite语句。"
+                prompt = f"{prompt_head}\n错误的sql:{sql_query}\n错误信息:{error_message}\n"
                 logging.info(f"生成反思提示: {prompt}")
 
                 # 获取大模型反思后的SQL查询
