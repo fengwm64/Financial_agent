@@ -39,6 +39,8 @@ class Sql_Task:
         # 找出最相似的2-4个问题及其对应的SQL
         exps = self.find_most_similar_questions(new_question)
         q_exps, sql_exps, query_result_exps, final_response_exps = zip(*exps)
+        logging.info(q_exps)
+        logging.info(sql_exps)
 
         # 生成初始的SQL
         prompt = Prompt.create_sql_icl_prompt(new_question, zip(q_exps, sql_exps))
@@ -48,11 +50,11 @@ class Sql_Task:
         sql_query = self.extract_sql_code(llm_first_respon)
 
         # 尝试执行SQL查询
-        for attempt in range(4):  # 最多尝试4次
+        for attempt in range(3):  # 最多尝试3次
             try:
                 logging.info(f"尝试 {attempt + 1}: 执行SQL查询: {sql_query}")
                 query_result = self.db.select(sql_query)
-                logging.info(f"SQL查询成功: {sql_query}")
+                logging.info(f"SQL查询成功: {query_result}")
 
                 # 返回提示词
                 return Prompt.create_final_icl_prompt(new_question, query_result, zip(q_exps, query_result_exps, final_response_exps)), sql_query
