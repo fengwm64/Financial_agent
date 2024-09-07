@@ -4,7 +4,6 @@ import json
 import os
 import logging
 import re
-from tqdm import tqdm
 
 from modules.Sql_Task import Sql_Task
 from modules.Text_Task import DocumentSearch

@@ -103,12 +103,9 @@ class DocumentSearch:
             content = doc["content"]
             file_name = doc["file_name"]
 
-            # 生成固定长度的上下文片段
-            context_snippet = self.extract_snippets(content, context_length)
-
             results.append({
                 "file_name": file_name,
-                "content_snippet": context_snippet,
+                "content": content,
                 "score": score
             })
 
@@ -140,8 +137,3 @@ class DocumentSearch:
 
         # 返回前top_n个结果
         return top_results
-
-    # 固定长度的上下文片段
-    def extract_snippets(self, content, context_length):
-        return content[:context_length]
-    

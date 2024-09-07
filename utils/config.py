@@ -35,7 +35,7 @@ class Config:
     bm25_cache_path = os.path.join(base_path, 'cache/bm25.pkl')
     tokenized_docs_cache_path = os.path.join(base_path, 'cache/tokenized_docs.pkl')
 
-    # API 密钥，用于访问模型或服务（此处为占位符）
+    # API 密钥
     zhipu_api_key = "b2ccc57634d43e3b01b255d5d9b3840d.KNUQg8zN98Id9OwU"
 
     # 指定使用的分词器名称
