@@ -33,7 +33,7 @@ class Config:
     # md文档划分缓存路径
     documents_cache_path = os.path.join(base_path, 'cache/docs_cache.pkl')
     bm25_cache_path = os.path.join(base_path, 'cache/bm25.pkl')
-    tokenized_docs_cache_path = os.path.join(base_path, 'cache/tokenized_docs.pkl')
+    tokenized_docs_cache_dir = os.path.join(base_path, 'cache/tokenized_docs')
 
     # API 密钥
     zhipu_api_key = "b2ccc57634d43e3b01b255d5d9b3840d.KNUQg8zN98Id9OwU"
@@ -57,6 +57,8 @@ class Config:
     stop_word_path = os.path.join(base_path, 'data/stopwords.txt')
 
     # 词嵌入模型
-    emb_model_name = "Alibaba-NLP/gte-multilingual-base"
+    emb_model_path = "/home/fwm/.cache/modelscope/hub/model1001/Conan"
 
-
+    faiss_index_dir = os.path.join(base_path, 'cache/faiss')
+    
+    embeddings_cache_path = os.path.join(base_path, 'embeddings_cache.pkl')

@@ -14,6 +14,8 @@ from utils.config import Config
 from utils.prompt import Prompt
 from utils.llm import LLM
 
+os.chdir(Config.base_path)
+
 llm = LLM()
 
 class Sql_Task:
