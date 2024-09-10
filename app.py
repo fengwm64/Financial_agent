@@ -20,6 +20,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+Config.create_directories()
+
 def read_jsonl(path):
     content = []
     with jsonlines.open(path, "r") as json_file:

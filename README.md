@@ -13,3 +13,18 @@
 - **文本理解**：设计基于BM25的两级检索机制，首先通过公司名称检索得到包含公司信息的文档名，然后使用关键词检索获取相关片段，最后构造提示词调用大模型生成回答。
 
 ![](http://www.linfeng-coding.top:85/i/2024/09/06/xvid69.png)
+
+## 安装
+
+请确保您已经安装了 Conda 和 Pip，然后按照以下步骤安装所需的依赖项：
+
+- 安装 `FAISS-GPU`:
+```bash
+conda install -c pytorch -c nvidia -c rapidsai -c conda-forge faiss-gpu-raft=1.8.0
+```
+
+- 安装 Python 依赖项:
+
+```bash
+pip install -r requirements.txt
+```

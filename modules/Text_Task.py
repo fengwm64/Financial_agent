@@ -7,6 +7,7 @@ import numpy as np
 import faiss
 import tqdm
 import warnings
+import re
 
 from tqdm import tqdm
 from collections import Counter
@@ -14,9 +15,6 @@ from rank_bm25 import BM25Okapi
 from langchain.text_splitter import MarkdownTextSplitter
 from utils.config import Config
 from utils.prompt import Prompt
-from langchain.retrievers import EnsembleRetriever
-from langchain_community.retrievers import BM25Retriever
-from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # 关闭特定类型的警告
@@ -45,7 +43,7 @@ class DocumentSearch:
 
         md_files = glob.glob(os.path.join(self.md_path, "*.md"))
         documents = []
-        splitter = MarkdownTextSplitter(chunk_size=500, chunk_overlap=200)
+        splitter = MarkdownTextSplitter(chunk_size=Config.chunk_size, chunk_overlap=Config.chunk_overlap)
 
         for file_path in md_files:
             with open(file_path, 'r', encoding='utf-8') as file:
@@ -194,21 +192,10 @@ class DocumentSearch:
 
     def bm25_query_in_file(self, file_name, keyword, top_n=20):
         # 提取指定文件的所有文档片段
-        file_docs = [doc for doc in self.documents if doc["file_name"] == file_name+".md"]
+        file_docs = [doc for doc in self.documents if doc["file_name"] == file_name]
 
-        # 文件名用于持久化
-        tokenized_docs_file = f"{Config.tokenized_docs_cache_dir}/{file_name}.pkl"
-
-        # 尝试加载持久化的 tokenized_docs
-        if os.path.exists(tokenized_docs_file):
-            with open(tokenized_docs_file, "rb") as f:
-                tokenized_docs = pickle.load(f)
-        else:
-            # 对文档片段进行分词和去除停用词
-            tokenized_docs = [self.tokenize_and_remove_stopwords(doc['content']) for doc in file_docs]
-            # 持久化 tokenized_docs
-            with open(tokenized_docs_file, "wb") as f:
-                pickle.dump(tokenized_docs, f)
+        # 对文档片段进行分词和去除停用词
+        tokenized_docs = [self.tokenize_and_remove_stopwords(doc['content']) for doc in file_docs]
 
         # 对文档片段进行BM25索引
         bm25 = BM25Okapi(tokenized_docs)
@@ -239,8 +226,10 @@ class DocumentSearch:
 
     # 使用faiss搜索
     def faiss_query_in_file(self, file_name, keyword, top_n=20):
+        file_name = file_name[:-3]
         # 从索引字典中获取指定文件的索引
         index = self.index.get(file_name)
+
         if index is None:
             index = self.index.get(file_name + ".index")
             if index is None:
@@ -255,7 +244,6 @@ class DocumentSearch:
 
         # 获取对应的文档内容
         document_sections = [doc['content'] for doc in self.documents if doc['file_name'] == file_name + ".md"]
-        print(len(document_sections))
     
         # 创建一个映射来通过索引访问文档内容
         content_map = {i: section for i, section in enumerate(document_sections)}
@@ -294,28 +282,34 @@ class DocumentSearch:
         return results
 
     # 混合搜索
-    def hybrid_query_in_file(self, file_name, keyword, top_n=5, bm25_weight=0.5, faiss_weight=0.5):
+    def hybrid_query_in_file(self, file_name, keyword, top_n=Config.top_n, bm25_weight=0.5, faiss_weight=0.5):
         # 使用BM25进行查询
-        bm25_results = self.bm25_query_in_file(file_name, keyword, top_n)
+        bm25_results = self.bm25_query_in_file(file_name, keyword, int(top_n*1.5))
         
         # 使用FAISS进行查询
-        faiss_results = self.faiss_query_in_file(file_name, keyword, top_n)
+        faiss_results = self.faiss_query_in_file(file_name, keyword, int(top_n*1.5))
         
         # 创建结果字典以方便合并
         results_dict = {}
+        seen_contents = set()  # 追踪已处理的内容
 
         # 处理BM25结果
         for result in bm25_results:
             content = result["content"]
+            if content in seen_contents:
+                continue  # 跳过已处理的内容
+            seen_contents.add(content)
+            
             score = result["score"] * bm25_weight
-            if content in results_dict:
-                results_dict[content]["score"] += score
-            else:
-                results_dict[content] = {"score": score}
+            results_dict[content] = {"score": score}
 
         # 处理FAISS结果
         for result in faiss_results:
             content = result["content"]
+            if content in seen_contents:
+                continue  # 跳过已处理的内容
+            seen_contents.add(content)
+            
             score = result["score"] * faiss_weight
             if content in results_dict:
                 results_dict[content]["score"] += score
@@ -328,10 +322,11 @@ class DocumentSearch:
 
         return top_results
 
+
     # 整合函数
-    def run(self, question, company, keyword, top_n=10, bm25_weight=0.5, faiss_weight=0.5):
+    def run(self, question, company, keyword, top_n=25, bm25_weight=0.5, faiss_weight=0.5):
         # 查找公司所在文件名
-        _, most_common_file = self.find_most_comm_file(company, top_n=20)
+        _, most_common_file = self.find_most_comm_file(company, top_n=25)
 
         logging.info(f"出现次数最多的文件名: {most_common_file}\n")
 
@@ -340,7 +335,7 @@ class DocumentSearch:
 
         if top_results:
             # 提取内容列表
-            contents = [result['content'] for result in top_results]
+            contents = [self.remove_markdown_images(result['content']) for result in top_results]
             
             # 拼接提示词
             final_prompt = Prompt.create_final_text_prompt(question, contents)
@@ -350,4 +345,10 @@ class DocumentSearch:
         
         # 返回prompt
         return final_prompt, most_common_file
+    
+    # 过滤 Markdown 图片语法，例如：![image](image.png)
+    def remove_markdown_images(self,text):
+        image_pattern = r"!\[.*?\]\(.*?\)"
+        cleaned_text = re.sub(image_pattern, '', text)
+        return cleaned_text
     

@@ -18,6 +18,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'  # 日志格式
 )
 
+Config.create_directories()
+
 # 读取jsonl
 def read_jsonl(path):
     content = []
@@ -44,14 +46,11 @@ def run_eval(checkpoint_file=Config.res_json_path):
             results = [json.loads(line) for line in file.readlines()]
 
     processed_ids = {result["id"] for result in results}  # 已处理问题的ID集合
-    ir = Intent_Recognition()  # 加载意图识别模型
-    sql_task = Sql_Task()  # 加载SQL任务执行器
-    generator = Generator()  # 加载结果生成器
-    ds = DocumentSearch(
-        stopword_path=Config.stop_word_path,
-        md_path=Config.pdf_to_md_path
-    )
-    sql_error = 0  # 初始化SQL错误计数器
+    ir = Intent_Recognition()   # 加载意图识别模型
+    sql_task = Sql_Task()       # 加载SQL任务执行器
+    generator = Generator()     # 加载结果生成器
+    ds = DocumentSearch()       # 加载文本理解任务执行器
+    sql_error = 0               # 初始化SQL错误计数器
 
     for i, question in enumerate(question_generator):
         # 跳过已处理的问题
@@ -91,7 +90,7 @@ def run_eval(checkpoint_file=Config.res_json_path):
             logging.info("关键词:"+keyword)
             
             if company_name is not None and keyword is not None:
-                prompt, _ = ds.run(question, company_name, keyword)
+                prompt, _ = ds.run(question, company_name, keyword, top_n=25)
 
             logging.info(f"prompt {prompt}")
         

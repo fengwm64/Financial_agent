@@ -1,0 +1,12 @@
+gradio
+jieba
+jsonlines
+langchain
+langchain-community
+langchain-huggingface
+modelscope
+numpy
+scikit-learn
+tqdm
+zhipuai
+rank_bm25
